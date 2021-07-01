@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+flask-migrate = "*"
+flask-sqlalchemy = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
+
+[scripts]
+setup = "set FLASK_APP=src/app.py"
+init = "flask db init"
+migrate = "flask db migrate"
+upgrade = "flask db upgrade"
+start = "python src/app.py"
