@@ -1,9 +1,14 @@
 from operator import ge
-from os import name
+from os import access, name
 from typing import BinaryIO
 from flask import Flask, jsonify, request, render_template
 from flask_migrate import Migrate
 from models import Profile, db,User,Character,FavoriteCharacter,Planet, FavoritePlanet, Profile
+#import from jwt doc
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import get_jwt_identity
+from flask_jwt_extended import jwt_required
+from flask_jwt_extended import JWTManager
 
 app = Flask(__name__)
 app.config["DEBUG"] = True
@@ -11,8 +16,39 @@ app.config["ENV"] = "development"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_DATABASE_URI"]="sqlite:///datastar.db"
 
+# Setup the Flask-JWT-Extended extension
+app.config["JWT_SECRET_KEY"] = "use-super-token"  # Change this!
+jwt = JWTManager(app)
+
 db.init_app(app)
 Migrate(app,db)
+
+
+#Ruta para login
+@app.route("/login", methods=["POST"])
+def login():
+    name = request.json.get("name", None)
+    password = request.json.get("password", None)
+    #Search the current user in the db
+    user = User.query.filter_by(name = name, password=password).first()
+    if user is None:
+        #Return that the user is not in db
+        return jsonify({"msg":"User or password incorrect"}), 401
+    # si esta, create a new token with the user id inside
+    access_token = create_access_token(identity=user.id)
+    return jsonify({"token": access_token, "user_id":user.id})
+
+""" #Ruta para proteger
+@app.route("/protected", methods=["GET"])
+@jwt_required()
+def protected():
+    #Acceder ala identidad del usuario actual con get_jwt_identity
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+
+    return jsonify({"id": user.id, "username":user.name}),200 """
+    
+
 
 @app.route("/", methods=["GET"])
 def home():
@@ -24,12 +60,28 @@ def list_user():
     users = list(map(lambda user: user.serialize(),users))
     return jsonify(users), 200
 
+""" 
 #GET SINGLE USER
-@app.route("/api/users/<int:id>", methods=["GET"])
-def get_single_user(id):
-    user = User.query.get(id)
+@app.route("/api/user", methods=["GET"])
+@jwt_required()
 
-    return jsonify(user.serialize()), 200 """
+def get_single_user():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+
+    return jsonify(user.serialize()), 200 
+
+#GET Characters favoritos de un user
+@app.route("/api/favoritos", methods=["GET"])
+@jwt_required()
+
+def get_favoritos_user():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+
+    return jsonify(user.name, user.get_characters()), 200
 
 """ #POST PARA USER
 @app.route("/api/users",methods = ["POST"])
@@ -59,6 +111,7 @@ def post_user():
 #GET;POST UPDATE DELETE USER
 @app.route("/api/users", methods=["GET","POST"])
 @app.route("/api/users/<int:id>", methods=["GET","DELETE","PUT"])
+
 def users(id=None):
     if request.method == "GET":
         if id is not None:
