@@ -1,4 +1,6 @@
 from operator import ge
+from os import name
+from typing import BinaryIO
 from flask import Flask, jsonify, request, render_template
 from flask_migrate import Migrate
 from models import Profile, db,User,Character,FavoriteCharacter,Planet, FavoritePlanet, Profile
@@ -15,7 +17,7 @@ Migrate(app,db)
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
-#GET PARA USER
+""" #GET PARA USER
 @app.route("/api/users", methods=["GET"])
 def list_user():
     users = User.query.all()
@@ -27,9 +29,9 @@ def list_user():
 def get_single_user(id):
     user = User.query.get(id)
 
-    return jsonify(user.serialize()), 200
+    return jsonify(user.serialize()), 200 """
 
-#POST PARA USER
+""" #POST PARA USER
 @app.route("/api/users",methods = ["POST"])
 def post_user():
     name = request.json.get("name")
@@ -53,9 +55,71 @@ def post_user():
     db.session.add(user)
     db.session.commit()
 
-    return jsonify(user.serialize()), 201
+    return jsonify(user.serialize()), 201 """
+#GET;POST UPDATE DELETE USER
+@app.route("/api/users", methods=["GET","POST"])
+@app.route("/api/users/<int:id>", methods=["GET","DELETE","PUT"])
+def users(id=None):
+    if request.method == "GET":
+        if id is not None:
+            user = User.query.get(id)
+            return jsonify(user.serialize()), 200
+    
+        users = User.query.all()
+        users = list(map(lambda user: user.serialize(), users))
+        return jsonify(users), 200
 
-#GET PARA CHARACTERS
+    if request.method == "POST":
+        name = request.json.get("name")
+        email = request.json.get("email")
+        password = request.json.get("password")
+
+        bio = request.json.get("bio", "")
+        
+
+        user = User()
+        user.name = name
+        user.email = email
+        user.password = password
+
+        profile = Profile()
+        profile.bio = bio
+
+        user.profile = profile
+        user.save()
+
+        return jsonify(user.serialize()), 201
+    
+    if request.method == "PUT":
+        name = request.json.get("name")
+        email = request.json.get("email")
+        password = request.json.get("password")
+
+        bio = request.json.get("bio", "")
+
+        user = User.query.get(id)
+        user.name = name
+        user.email = email
+        user.password = password
+        user.profile.bio = bio #relationship
+
+        profile = Profile.query.filter_by(user_id =id).first()
+        
+
+        user.profile = profile
+
+        user.update()
+
+        return jsonify(user.serialize()), 200
+    
+    if request.method == "DELETE":
+        user = User.query.get(id)
+        user.delete()
+        return jsonify({"Success":"User Eliminated"})
+
+       
+
+""" #GET PARA CHARACTERS
 @app.route("/api/characters", methods = ["GET"])
 def list_character():
     characters = Character.query.all()
@@ -91,24 +155,91 @@ def post_character():
     db.session.add(character)
     db.session.commit()
 
-    return jsonify(character.serialize()), 201
+    return jsonify(character.serialize()), 201 """
+
+#GET ; POST PUT; DELETER PARA CHARACTERS
+
+@app.route("/api/characters",methods=["GET","POST"])
+@app.route("/api/characters/<int:id>", methods = ["GET","PUT","DELETE"])
+def _characters(id = None):
+    if request.method == "GET":
+        if id is not None:
+            character = Character.query.get(id)
+            return jsonify(character.serialize()),200
+        
+        characters = Character.query.all()
+        characters = list(map(lambda character : character.serialize(),characters))
+        return jsonify(characters), 200
+    if request.method == "POST":
+        name = request.json.get("name")
+        height = request.json.get("height")
+        mass = request.json.get("mass")
+        hair_color = request.json.get("hair_color")
+        skin_color = request.json.get("skin_color")
+        eye_color = request.json.get("eye_color")
+        birth_year = request.json.get("birth_year")
+        gender = request.json.get("gender")
+        homeworld = request.json.get("homeworld")
+        character = Character()
+        character.name = name
+        character.height = height
+        character.mass= mass
+        character.hair_color = hair_color
+        character.skin_color = skin_color
+        character.eye_color = eye_color
+        character.birth_year = birth_year
+        character.gender = gender
+        character.homeworld = homeworld
+        character.save()
+
+        return jsonify(character.serialize()),201
+
+    if request.method == "PUT":
+        name = request.json.get("name")
+        height = request.json.get("height")
+        mass = request.json.get("mass")
+        hair_color = request.json.get("hair_color")
+        skin_color = request.json.get("skin_color")
+        eye_color = request.json.get("eye_color")
+        birth_year = request.json.get("birth_year")
+        gender = request.json.get("gender")
+        homeworld = request.json.get("homeworld")
+        character = Character.query.get(id)
+        character.name = name
+        character.height = height
+        character.mass= mass
+        character.hair_color = hair_color
+        character.skin_color = skin_color
+        character.eye_color = eye_color
+        character.birth_year = birth_year
+        character.gender = gender
+        character.homeworld = homeworld
+        character.update()
+
+        return jsonify(character.serialize()), 200
+    if request.method == "DELETE":
+        character = Character.query.get(id)
+        character.delete()
+        return jsonify({"Success":"Character Deleted"}), 200
 
 #GET FAVORITE CHARACTER
 @app.route("/api/favoriteCharacters")
 def list_favorite_characters():
     favoritesCh = FavoriteCharacter.query.all()
+    
     favoritesCh = list(map(lambda favo : favo.serialize(),favoritesCh))
+
 
     return jsonify(favoritesCh), 200
 
 #POST FAVORITE CHARACTER
 @app.route("/api/favoriteCharacters", methods = ["POST"])
 def post_favorite_character():
-    id_user = request.json.get("id_user")
-    id_character = request.json.get("id_character")
+    user_id = request.json.get("user_id")
+    character_id = request.json.get("character_id")
     favoriteCh = FavoriteCharacter()
-    favoriteCh.id_user = id_user
-    favoriteCh.id_character = id_character
+    favoriteCh.user_id = user_id
+    favoriteCh.character_id = character_id
 
     db.session.add(favoriteCh)
     db.session.commit()
@@ -126,16 +257,78 @@ def get_favorite_planets():
 #POST FAVORITE PLANETS
 @app.route("/api/favoritePlanets", methods=["POST"])
 def post_favorite_planets():
-    id_user = request.json.get("id_user")
+    user_id = request.json.get("user_id")
     id_planet = request.json.get("id_planet")
     favoritePl = FavoritePlanet()
-    favoritePl.id_user = id_user
+    favoritePl.user_id = user_id
     favoritePl.id_planet = id_planet
 
     db.session.add(favoritePl)
     db.session.commit()
 
     return jsonify(favoritePl.serialize()),201
+
+#POST.GET.UPDATE.DELETE PLANETS
+@app.route("/api/planets", methods=["GET","POST"])
+@app.route("/api/planets/<int:id>" ,methods=["GET","PUT","DELETE"])
+def planets(id = None):
+    if request.method == "GET":
+        if id is not None:
+            planet = Planet.query.get(id)
+            return jsonify(planet.serialize()), 200
+        
+        planets = Planet.query.all()
+        planets = list(map(lambda planet : planet.serialize(),planets))
+        return jsonify(planets),200
+    
+    if request.method == "POST":
+        
+        name = request.json.get("name")
+        diameter = request.json.get("diameter")
+        climate = request.json.get("climate")
+        gravity = request.json.get("gravity")
+        terrain = request.json.get("terrain")
+        population = request.json.get("population")
+
+        planet = Planet()
+        planet.name = name
+        planet.diameter =diameter
+        planet.climate = climate
+        planet.gravity = gravity
+        planet.terrain = terrain
+        planet.population = population
+
+        planet.save()
+        
+        return jsonify(planet.serialize()),201
+    
+    if request.method == "PUT":
+        name = request.json.get("name")
+        diameter = request.json.get("diameter")
+        climate = request.json.get("climate")
+        gravity = request.json.get("gravity")
+        terrain = request.json.get("terrain")
+        population = request.json.get("population")
+
+        planet = Planet.query.get(id)
+        planet.name = name
+        planet.diameter =diameter
+        planet.climate = climate
+        planet.gravity = gravity
+        planet.terrain = terrain
+        planet.population = population
+
+        planet.update()
+
+        return jsonify(planet.serialize()), 200
+    
+    if request.method == "DELETE":
+        planet = Planet.query.get(id)
+        planet.delete()
+
+        return jsonify({"Success": "Planet Eliminated"}), 200
+
+
 
 
 

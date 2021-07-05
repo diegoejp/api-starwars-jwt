@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 17f1ecafec96
+Revision ID: 70c68b6e7cc3
 Revises: 
-Create Date: 2021-07-01 17:40:34.738415
+Create Date: 2021-07-02 11:11:25.999439
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '17f1ecafec96'
+revision = '70c68b6e7cc3'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -50,18 +50,19 @@ def upgrade():
     sa.UniqueConstraint('email')
     )
     op.create_table('favoritecharacters',
-    sa.Column('id_user', sa.Integer(), nullable=False),
-    sa.Column('id_character', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['id_character'], ['character.id'], ),
-    sa.ForeignKeyConstraint(['id_user'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id_user', 'id_character')
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('character_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['character_id'], ['character.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('favoriteplanet',
-    sa.Column('id_user', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('id_planet', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['id_planet'], ['planet.id'], ),
-    sa.ForeignKeyConstraint(['id_user'], ['user.id'], ),
-    sa.PrimaryKeyConstraint('id_user', 'id_planet')
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
+    sa.PrimaryKeyConstraint('user_id', 'id_planet')
     )
     op.create_table('profiles',
     sa.Column('id', sa.Integer(), nullable=False),
